@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { categories, milestoneDays } from '@/lib/moods';
+import { categories, milestoneDays, tagColors } from '@/lib/moods';
 
-interface Record {
+interface RecordType {
   id: string;
   userId: string;
   title: string;
@@ -13,19 +13,22 @@ interface Record {
   mood: string;
   weather: string;
   note?: string | null;
+  tags?: string | null;
   futureLetter?: string | null;
   futureLetterDate?: string | null;
   isPinned: boolean;
+  notifyDaily?: boolean;
+  notifyMilestone?: boolean;
   createdAt: string;
   updatedAt: string;
 }
 
 interface EventCardProps {
-  record: Record;
-  onEdit: (record: Record) => void;
+  record: RecordType;
+  onEdit: (record: RecordType) => void;
   onDelete: (id: string) => void;
   onTogglePin: (id: string, isPinned: boolean) => void;
-  onShare: (record: Record) => void;
+  onShare: (record: RecordType) => void;
   cardBg: string;
   borderColor: string;
   textColor: string;
@@ -42,7 +45,6 @@ function getDaysDiff(dateStr: string): number {
 
 function isMilestone(days: number): number | null {
   if (days > 0 && milestoneDays.includes(days)) return days;
-  if (days < 0 && milestoneDays.includes(Math.abs(days))) return Math.abs(days);
   return null;
 }
 
@@ -63,87 +65,92 @@ export default function EventCard({
   const absDays = Math.abs(days);
   const milestone = isMilestone(days);
   const cat = categories.find((c) => c.name === record.category);
+  const cardColor = cat?.color || '#95a5a6';
+
+  const tags = record.tags ? record.tags.split(',').map(t => t.trim()).filter(Boolean) : [];
 
   const letterDate = record.futureLetterDate ? new Date(record.futureLetterDate) : null;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const letterReady = letterDate ? today >= letterDate : false;
 
+  const isMilestoneCard = milestone !== null;
+
   return (
     <div
-      className="relative rounded-xl p-5 transition-all duration-300 hover:shadow-lg group"
+      className={`event-card ${isFuture ? 'future' : ''} ${isMilestoneCard ? 'milestone' : ''}`}
       style={{
-        background: cardBg,
-        border: isFuture ? `2px dashed ${borderColor}` : `1px solid ${borderColor}`,
-        boxShadow: isFuture ? undefined : `0 0 20px ${borderColor}15`,
+        background: isMilestoneCard
+          ? 'linear-gradient(135deg, rgba(245,158,11,0.15), rgba(234,88,12,0.1))'
+          : cardBg,
+        borderColor: isMilestoneCard ? '#f59e0b' : cardColor,
       }}
     >
-      {record.isPinned && (
-        <span className="absolute -top-2 -left-2 text-lg">📌</span>
-      )}
+      {record.isPinned && <span className="event-pin">📌</span>}
 
       {milestone && (
-        <div
-          className="absolute -top-3 right-4 px-3 py-0.5 rounded-full text-xs font-bold"
-          style={{
-            background: 'linear-gradient(135deg, #f59e0b, #ea580c)',
-            color: '#fff',
-          }}
-        >
-          {milestone}天里程碑
+        <div className="event-milestone-badge">
+          {milestone}天里程碑 ✨
         </div>
       )}
 
-      <div className="flex items-start gap-4">
-        <div className="text-4xl shrink-0">{record.mood}</div>
-        <div className="flex-1 min-w-0">
-          <h3 className="text-lg font-bold mb-1 truncate" style={{ color: textColor, fontFamily: 'Noto Sans SC, sans-serif' }}>
-            {record.title}
-          </h3>
+      <div className="event-card-body">
+        <div className="event-mood-circle" style={{ background: cardColor + '25' }}>
+          {record.mood}
+        </div>
+        <div className="event-info">
+          <h3 className="event-title" style={{ color: textColor }}>{record.title}</h3>
 
-          <div className="flex items-center gap-2 mb-2 flex-wrap">
-            <span className="text-xs" style={{ color: textSecondary, fontFamily: 'DM Mono, monospace' }}>
-              {record.eventDate}
-            </span>
-            <span className="text-sm">{record.weather}</span>
+          <div className="event-meta">
+            <span className="event-date" style={{ color: textSecondary }}>{record.eventDate}</span>
+            <span className="event-weather">{record.weather}</span>
             <span
-              className="px-2 py-0.5 rounded-full text-xs font-medium"
-              style={{ background: (cat?.color || '#6b7280') + '30', color: cat?.color || '#6b7280' }}
+              className="event-category-tag"
+              style={{ background: cardColor + '30', color: cardColor }}
             >
               {record.category}
             </span>
           </div>
 
-          <p className="text-xs mb-2" style={{ color: textSecondary }}>
+          <div className="event-days" style={{ color: isFuture ? '#3b82f6' : '#f59e0b' }}>
             {isFuture ? `还有 ${absDays} 天` : `已过 ${absDays} 天`}
-          </p>
+          </div>
+
+          {tags.length > 0 && (
+            <div className="event-tags">
+              {tags.map((tag, i) => (
+                <span
+                  key={i}
+                  className="event-tag"
+                  style={{ background: tagColors[i % tagColors.length] + '30', color: tagColors[i % tagColors.length] }}
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
 
           {record.note && (
-            <p className="text-sm mb-2" style={{ color: textColor, opacity: 0.8 }}>
-              {record.note}
-            </p>
+            <p className="event-note" style={{ color: textColor }}>{record.note}</p>
           )}
 
           {record.futureLetter && (
-            <div className="mt-2">
+            <div className="event-letter">
               {!letterReady ? (
-                <p className="text-xs" style={{ color: textSecondary }}>
+                <p className="event-letter-locked" style={{ color: textSecondary }}>
                   🔒 写给未来的信 — 还未到打开时间
                 </p>
               ) : (
                 <div>
                   <button
                     onClick={() => setLetterExpanded(!letterExpanded)}
-                    className="text-xs underline cursor-pointer"
+                    className="event-letter-toggle"
                     style={{ color: textSecondary }}
                   >
                     📖 {letterExpanded ? '收起信件' : '展开信件'}
                   </button>
                   {letterExpanded && (
-                    <div
-                      className="mt-2 p-3 rounded-lg text-sm"
-                      style={{ background: borderColor + '30', color: textColor }}
-                    >
+                    <div className="event-letter-content" style={{ background: borderColor + '30', color: textColor }}>
                       {record.futureLetter}
                     </div>
                   )}
@@ -154,34 +161,13 @@ export default function EventCard({
         </div>
       </div>
 
-      <div className="flex gap-2 mt-3 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-        <button
-          onClick={() => onEdit(record)}
-          className="px-2 py-1 rounded text-xs hover:bg-white/10 transition-colors"
-          style={{ color: textSecondary }}
-        >
-          编辑
-        </button>
-        <button
-          onClick={() => onTogglePin(record.id, !record.isPinned)}
-          className="px-2 py-1 rounded text-xs hover:bg-white/10 transition-colors"
-          style={{ color: textSecondary }}
-        >
+      <div className="event-actions">
+        <button onClick={() => onEdit(record)} style={{ color: textSecondary }}>编辑</button>
+        <button onClick={() => onTogglePin(record.id, !record.isPinned)} style={{ color: textSecondary }}>
           {record.isPinned ? '取消置顶' : '置顶'}
         </button>
-        <button
-          onClick={() => onShare(record)}
-          className="px-2 py-1 rounded text-xs hover:bg-white/10 transition-colors"
-          style={{ color: textSecondary }}
-        >
-          分享
-        </button>
-        <button
-          onClick={() => onDelete(record.id)}
-          className="px-2 py-1 rounded text-xs hover:bg-red-500/20 text-red-400 transition-colors"
-        >
-          删除
-        </button>
+        <button onClick={() => onShare(record)} style={{ color: textSecondary }}>分享</button>
+        <button onClick={() => onDelete(record.id)} className="delete">删除</button>
       </div>
     </div>
   );

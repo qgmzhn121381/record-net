@@ -3,7 +3,7 @@
 import { useState } from 'react';
 
 interface AuthFormProps {
-  onLogin: (user: { id: string; username: string; isAdmin: boolean }) => void;
+  onLogin: (user: { id: string; username: string; isAdmin: boolean; birthday?: string | null }) => void;
 }
 
 export default function AuthForm({ onLogin }: AuthFormProps) {
@@ -11,6 +11,7 @@ export default function AuthForm({ onLogin }: AuthFormProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [birthday, setBirthday] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -37,10 +38,13 @@ export default function AuthForm({ onLogin }: AuthFormProps) {
 
     try {
       const url = isLogin ? '/api/auth/login' : '/api/auth/register';
+      const body: Record<string, string> = { username, password };
+      if (!isLogin && birthday) body.birthday = birthday;
+
       const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify(body),
       });
 
       const data = await res.json();
@@ -68,72 +72,93 @@ export default function AuthForm({ onLogin }: AuthFormProps) {
   };
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center p-4"
-      style={{ background: 'linear-gradient(135deg, #0f172a 0%, #581c87 100%)' }}
-    >
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1
-            className="text-5xl font-bold text-white mb-2"
-            style={{ fontFamily: 'Playfair Display, serif' }}
-          >
-            记录网
-          </h1>
-          <p className="text-gray-300" style={{ fontFamily: 'Noto Sans SC, sans-serif' }}>
-            记录每一个值得铭记的时刻
-          </p>
+    <div className="login-page">
+      <div className="login-particles">
+        {Array.from({ length: 30 }).map((_, i) => (
+          <div
+            key={i}
+            className="login-particle"
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              width: `${6 + Math.random() * 10}px`,
+              height: `${6 + Math.random() * 10}px`,
+              animationDelay: `${Math.random() * 8}s`,
+              animationDuration: `${6 + Math.random() * 8}s`,
+              opacity: 0.15 + Math.random() * 0.2,
+            }}
+          />
+        ))}
+      </div>
+
+      <div className="login-container">
+        <div className="login-brand">
+          <h1 className="login-title">记录网</h1>
+          <p className="login-subtitle">记录每一个值得铭记的时刻</p>
         </div>
 
-        <div
-          className="rounded-2xl p-8 shadow-2xl border border-white/10"
-          style={{
-            background: 'rgba(255, 255, 255, 0.08)',
-            backdropFilter: 'blur(16px)',
-          }}
-        >
-          <h2 className="text-2xl font-bold text-white mb-6 text-center" style={{ fontFamily: 'Noto Sans SC, sans-serif' }}>
-            {isLogin ? '登录' : '注册'}
-          </h2>
+        <div className="login-card">
+          <div className="login-tabs">
+            <button
+              className={`login-tab ${isLogin ? 'active' : ''}`}
+              onClick={() => { setIsLogin(true); setError(''); }}
+            >
+              登录
+            </button>
+            <button
+              className={`login-tab ${!isLogin ? 'active' : ''}`}
+              onClick={() => { setIsLogin(false); setError(''); }}
+            >
+              注册
+            </button>
+          </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
+          <form onSubmit={handleSubmit} className="login-form">
+            <div className="login-field">
               <input
                 type="text"
-                placeholder="用户名"
+                placeholder="用户名（至少3个字符）"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:border-orange-400 transition-colors"
-                style={{ fontFamily: 'Noto Sans SC, sans-serif' }}
+                className="login-input"
               />
             </div>
 
-            <div>
+            <div className="login-field">
               <input
                 type="password"
-                placeholder="密码"
+                placeholder="密码（至少6个字符）"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:border-orange-400 transition-colors"
-                style={{ fontFamily: 'Noto Sans SC, sans-serif' }}
+                className="login-input"
               />
             </div>
 
             {!isLogin && (
-              <div>
-                <input
-                  type="password"
-                  placeholder="确认密码"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:border-orange-400 transition-colors"
-                  style={{ fontFamily: 'Noto Sans SC, sans-serif' }}
-                />
-              </div>
+              <>
+                <div className="login-field">
+                  <input
+                    type="password"
+                    placeholder="确认密码"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="login-input"
+                  />
+                </div>
+                <div className="login-field">
+                  <label className="login-label">生日（选填）</label>
+                  <input
+                    type="date"
+                    value={birthday}
+                    onChange={(e) => setBirthday(e.target.value)}
+                    className="login-input"
+                  />
+                </div>
+              </>
             )}
 
             {error && (
-              <p className="text-red-400 text-sm text-center" style={{ fontFamily: 'Noto Sans SC, sans-serif' }}>
+              <p className={`login-error ${error.includes('成功') ? 'success' : ''}`}>
                 {error}
               </p>
             )}
@@ -141,26 +166,11 @@ export default function AuthForm({ onLogin }: AuthFormProps) {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 rounded-lg font-bold text-white transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
-              style={{
-                background: 'linear-gradient(135deg, #f97316 0%, #ec4899 100%)',
-                fontFamily: 'Noto Sans SC, sans-serif',
-              }}
+              className="login-button"
             >
-              {loading ? '处理中...' : isLogin ? '登录' : '注册'}
+              {loading ? '处理中...' : isLogin ? '登 录' : '注 册'}
             </button>
           </form>
-
-          <p
-            className="text-center mt-4 text-gray-400 cursor-pointer hover:text-white transition-colors"
-            onClick={() => {
-              setIsLogin(!isLogin);
-              setError('');
-            }}
-            style={{ fontFamily: 'Noto Sans SC, sans-serif' }}
-          >
-            {isLogin ? '没有账号？注册' : '已有账号？登录'}
-          </p>
         </div>
       </div>
     </div>

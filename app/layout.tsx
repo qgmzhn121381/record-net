@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Playfair_Display, Noto_Sans_SC, DM_Mono } from 'next/font/google';
+import { Playfair_Display, Noto_Sans_SC, Inter } from 'next/font/google';
 import './globals.css';
 
 const playfairDisplay = Playfair_Display({
@@ -15,11 +15,10 @@ const notoSansSC = Noto_Sans_SC({
   variable: '--font-noto-sans',
 });
 
-const dmMono = DM_Mono({
+const inter = Inter({
   subsets: ['latin'],
-  weight: ['400', '500'],
   display: 'swap',
-  variable: '--font-dm-mono',
+  variable: '--font-inter',
 });
 
 export const metadata: Metadata = {
@@ -35,7 +34,7 @@ export default function RootLayout({
   return (
     <html lang="zh-CN">
       <body
-        className={`${playfairDisplay.variable} ${notoSansSC.variable} ${dmMono.variable}`}
+        className={`${playfairDisplay.variable} ${notoSansSC.variable} ${inter.variable}`}
         style={{
           fontFamily: 'var(--font-noto-sans), Noto Sans SC, sans-serif',
           margin: 0,

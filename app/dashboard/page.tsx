@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import EventCard from '@/components/EventCard';
 import EventModal from '@/components/EventModal';
@@ -10,8 +10,12 @@ import SearchBar from '@/components/SearchBar';
 import CategoryFilter from '@/components/CategoryFilter';
 import MilestoneBar from '@/components/MilestoneBar';
 import StatsModal from '@/components/StatsModal';
+import Calendar from '@/components/Calendar';
+import RandomRecall from '@/components/RandomRecall';
 import { themes, defaultTheme, Theme } from '@/lib/themes';
-import { milestoneDays } from '@/lib/moods';
+import { milestoneDays, categories, tagColors } from '@/lib/moods';
+import { getTodayQuote } from '@/lib/quotes';
+import { toggleMusic, getIsPlaying } from '@/lib/audio';
 
 interface RecordType {
   id: string;
@@ -23,9 +27,12 @@ interface RecordType {
   mood: string;
   weather: string;
   note?: string | null;
+  tags?: string | null;
   futureLetter?: string | null;
   futureLetterDate?: string | null;
   isPinned: boolean;
+  notifyDaily?: boolean;
+  notifyMilestone?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -34,6 +41,7 @@ interface UserData {
   id: string;
   username: string;
   isAdmin: boolean;
+  birthday?: string | null;
 }
 
 function getDaysDiff(dateStr: string): number {
@@ -49,12 +57,21 @@ export default function Dashboard() {
   const [user, setUser] = useState<UserData | null>(null);
   const [records, setRecords] = useState<RecordType[]>([]);
   const [search, setSearch] = useState('');
+  const [tagFilter, setTagFilter] = useState('');
   const [category, setCategory] = useState('全部');
   const [currentTheme, setCurrentTheme] = useState<Theme>(defaultTheme);
   const [showModal, setShowModal] = useState(false);
   const [editingRecord, setEditingRecord] = useState<RecordType | null>(null);
   const [shareRecord, setShareRecord] = useState<RecordType | null>(null);
   const [showStats, setShowStats] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [showRecall, setShowRecall] = useState(false);
+  const [musicPlaying, setMusicPlaying] = useState(false);
+  const [quote] = useState(getTodayQuote);
+  const [isBirthday, setIsBirthday] = useState(false);
+  const [dailyReminders, setDailyReminders] = useState<{ title: string; days: number; isFuture: boolean }[]>([]);
+  const [showBirthdayCard, setShowBirthdayCard] = useState(false);
+  const notifRequested = useRef(false);
 
   useEffect(() => {
     const stored = localStorage.getItem('user');
@@ -70,7 +87,19 @@ export default function Dashboard() {
       const t = themes.find((th) => th.id === savedTheme);
       if (t) setCurrentTheme(t);
     }
+
+    const musicPref = localStorage.getItem('musicPlaying');
+    setMusicPlaying(musicPref === 'true');
   }, [router]);
+
+  // Request notification permission
+  useEffect(() => {
+    if (notifRequested.current) return;
+    notifRequested.current = true;
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
 
   const fetchRecords = useCallback(async () => {
     if (!user) return;
@@ -83,6 +112,54 @@ export default function Dashboard() {
     if (user) fetchRecords();
   }, [user, fetchRecords]);
 
+  // Check birthday and notifications after records load
+  useEffect(() => {
+    if (!user || records.length === 0 && !user.birthday) return;
+
+    // Birthday check
+    if (user.birthday) {
+      const today = new Date();
+      const bday = new Date(user.birthday);
+      if (today.getMonth() === bday.getMonth() && today.getDate() === bday.getDate()) {
+        setIsBirthday(true);
+        setShowBirthdayCard(true);
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification('生日快乐！', { body: '记录网祝你生日快乐！🎈' });
+        }
+      }
+    }
+
+    // Daily reminders
+    const reminders: { title: string; days: number; isFuture: boolean }[] = [];
+    records.forEach((r) => {
+      if (r.notifyDaily) {
+        const days = getDaysDiff(r.eventDate);
+        if (days < 0) {
+          reminders.push({ title: r.title, days: Math.abs(days), isFuture: true });
+        }
+      }
+    });
+    setDailyReminders(reminders);
+
+    // Milestone notifications
+    const today = new Date().toISOString().slice(0, 10);
+    const notifiedKey = `milestone-notified-${today}`;
+    const notified: string[] = JSON.parse(localStorage.getItem(notifiedKey) || '[]');
+
+    records.forEach((r) => {
+      if (r.notifyMilestone) {
+        const days = getDaysDiff(r.eventDate);
+        if (days > 0 && milestoneDays.includes(days) && !notified.includes(r.id)) {
+          if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification('里程碑！', { body: `今天是你「${r.title}」的第${days}天！` });
+          }
+          notified.push(r.id);
+        }
+      }
+    });
+    localStorage.setItem(notifiedKey, JSON.stringify(notified));
+  }, [records, user]);
+
   const handleThemeChange = (themeId: string) => {
     const t = themes.find((th) => th.id === themeId);
     if (t) {
@@ -93,7 +170,6 @@ export default function Dashboard() {
 
   const handleSave = async (data: Omit<RecordType, 'id' | 'userId' | 'isPinned' | 'createdAt' | 'updatedAt'>) => {
     if (!user) return;
-
     if (editingRecord) {
       await fetch(`/api/records/${editingRecord.id}`, {
         method: 'PUT',
@@ -107,7 +183,6 @@ export default function Dashboard() {
         body: JSON.stringify({ ...data, userId: user.id }),
       });
     }
-
     setShowModal(false);
     setEditingRecord(null);
     fetchRecords();
@@ -133,19 +208,45 @@ export default function Dashboard() {
     router.push('/');
   };
 
+  const handleExport = () => {
+    const data = JSON.stringify(records, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const date = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `record-net-backup-${date}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleMusicToggle = () => {
+    const playing = toggleMusic();
+    setMusicPlaying(playing);
+    localStorage.setItem('musicPlaying', String(playing));
+  };
+
+  // Gather all tags
+  const allTags = Array.from(
+    new Set(
+      records
+        .flatMap((r) => (r.tags || '').split(',').map((t) => t.trim()))
+        .filter(Boolean)
+    )
+  );
+
   const filteredRecords = records.filter((r) => {
     const matchSearch = r.title.toLowerCase().includes(search.toLowerCase()) ||
       (r.note || '').toLowerCase().includes(search.toLowerCase());
     const matchCategory = category === '全部' || r.category === category;
-    return matchSearch && matchCategory;
+    const matchTag = !tagFilter || (r.tags || '').includes(tagFilter);
+    return matchSearch && matchCategory && matchTag;
   });
 
   const todayMilestones = records
     .map((r) => {
       const days = getDaysDiff(r.eventDate);
-      if (days > 0 && milestoneDays.includes(days)) {
-        return { title: r.title, days };
-      }
+      if (days > 0 && milestoneDays.includes(days)) return { title: r.title, days };
       return null;
     })
     .filter(Boolean) as { title: string; days: number }[];
@@ -153,47 +254,35 @@ export default function Dashboard() {
   if (!user) return null;
 
   return (
-    <div
-      className="min-h-screen transition-colors duration-500"
-      style={{ background: currentTheme.background, color: currentTheme.text }}
-    >
+    <div className="dashboard" style={{ background: currentTheme.background, color: currentTheme.text }}>
       {/* Header */}
-      <div className="sticky top-0 z-40 px-4 md:px-6 py-3" style={{ background: currentTheme.background + 'ee', backdropFilter: 'blur(10px)' }}>
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-sm" style={{ color: currentTheme.text, fontFamily: 'Noto Sans SC, sans-serif' }}>
-              欢迎，{user.username}
-            </span>
+      <div className="dashboard-header" style={{ background: currentTheme.background + 'ee' }}>
+        <div className="dashboard-header-inner">
+          <div className="dashboard-welcome">
+            <span>欢迎，{user.username}</span>
             {user.isAdmin && (
-              <button
-                onClick={() => router.push('/admin')}
-                className="px-2 py-0.5 rounded text-xs hover:bg-yellow-500/20 transition-colors cursor-pointer"
-                style={{ background: '#f59e0b20', color: '#f59e0b' }}
-              >
+              <button onClick={() => router.push('/admin')} className="admin-badge-btn">
                 👑 管理员
               </button>
             )}
           </div>
 
-          <div className="flex items-center gap-3 flex-wrap justify-end">
-            <ThemeSwitcher
-              themes={themes}
-              currentTheme={currentTheme.id}
-              onThemeChange={handleThemeChange}
-            />
+          <div className="dashboard-controls">
+            <ThemeSwitcher themes={themes} currentTheme={currentTheme.id} onThemeChange={handleThemeChange} />
             <SearchBar value={search} onChange={setSearch} color={currentTheme.accent} />
-            <button
-              onClick={() => setShowStats(true)}
-              className="px-3 py-1.5 rounded-lg text-xs transition-colors hover:opacity-80"
-              style={{ background: currentTheme.card, color: currentTheme.text, border: `1px solid ${currentTheme.border}` }}
-            >
+            <button onClick={() => setShowStats(true)} className="header-btn" style={{ background: currentTheme.card, borderColor: currentTheme.border }}>
               统计
             </button>
-            <button
-              onClick={handleLogout}
-              className="px-3 py-1.5 rounded-lg text-xs text-red-400 hover:bg-red-500/10 transition-colors"
-              style={{ border: `1px solid ${currentTheme.border}` }}
-            >
+            <button onClick={() => setShowCalendar(true)} className="header-btn" style={{ background: currentTheme.card, borderColor: currentTheme.border }}>
+              日历
+            </button>
+            <button onClick={() => setShowRecall(true)} className="header-btn" style={{ background: currentTheme.card, borderColor: currentTheme.border }}>
+              🎲
+            </button>
+            <button onClick={handleExport} className="header-btn" style={{ background: currentTheme.card, borderColor: currentTheme.border }}>
+              导出
+            </button>
+            <button onClick={handleLogout} className="header-btn logout">
               退出
             </button>
           </div>
@@ -201,43 +290,83 @@ export default function Dashboard() {
       </div>
 
       {/* Content */}
-      <div className="max-w-5xl mx-auto px-4 md:px-6 py-6">
+      <div className="dashboard-content">
+        {/* Birthday Card */}
+        {showBirthdayCard && isBirthday && (
+          <div className="birthday-card">
+            <button onClick={() => setShowBirthdayCard(false)} className="birthday-close">✕</button>
+            <div className="birthday-emoji">🎂</div>
+            <p className="birthday-text">生日快乐，{user.username}！</p>
+            <p className="birthday-sub">愿你的每一天都充满阳光和快乐 🎈</p>
+          </div>
+        )}
+
+        {/* Daily Reminders */}
+        {dailyReminders.length > 0 && (
+          <div className="daily-reminders">
+            {dailyReminders.map((r, i) => (
+              <div key={i} className="daily-reminder-card">
+                <span>⏰</span>
+                <p>距离「{r.title}」还有 <strong>{r.days}</strong> 天！加油！</p>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Milestones */}
         <MilestoneBar milestones={todayMilestones} />
 
-        {/* Category Filter */}
-        <div className="mb-6">
+        {/* Quote */}
+        <div className="quote-card" style={{ background: currentTheme.card, borderColor: currentTheme.border }}>
+          <span className="quote-mark">&ldquo;</span>
+          <p className="quote-text" style={{ color: currentTheme.text }}>{quote}</p>
+          <span className="quote-mark-end">&rdquo;</span>
+        </div>
+
+        {/* Filters */}
+        <div className="filter-section">
           <CategoryFilter selected={category} onSelect={setCategory} cardBg={currentTheme.card} />
+          {allTags.length > 0 && (
+            <div className="tag-filter">
+              <button
+                onClick={() => setTagFilter('')}
+                className={`tag-filter-btn ${!tagFilter ? 'active' : ''}`}
+                style={{ background: !tagFilter ? '#667eea' : 'rgba(255,255,255,0.05)', color: !tagFilter ? '#fff' : '#94a3b8' }}
+              >
+                全部标签
+              </button>
+              {allTags.map((tag, i) => (
+                <button
+                  key={tag}
+                  onClick={() => setTagFilter(tag === tagFilter ? '' : tag)}
+                  className={`tag-filter-btn ${tagFilter === tag ? 'active' : ''}`}
+                  style={{
+                    background: tagFilter === tag ? tagColors[i % tagColors.length] : tagColors[i % tagColors.length] + '20',
+                    color: tagFilter === tag ? '#fff' : tagColors[i % tagColors.length],
+                  }}
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Timeline */}
         {filteredRecords.length === 0 ? (
-          <div className="text-center py-20">
-            <p className="text-4xl mb-4">📝</p>
-            <p style={{ color: currentTheme.textSecondary, fontFamily: 'Noto Sans SC, sans-serif' }}>
-              还没有记录，点击 + 添加你的第一条记录
-            </p>
+          <div className="empty-state">
+            <p className="empty-emoji">📝</p>
+            <p className="empty-text">还没有记录，点击 + 添加你的第一条记录</p>
           </div>
         ) : (
-          <div className="relative">
-            {/* Timeline center line */}
-            <div
-              className="absolute left-1/2 transform -translate-x-px h-full w-0.5 hidden md:block"
-              style={{ background: `linear-gradient(to bottom, ${currentTheme.accent}40, ${currentTheme.accent}10)` }}
-            />
-
-            <div className="space-y-6">
+          <div className="timeline">
+            <div className="timeline-line" style={{ background: `linear-gradient(to bottom, ${currentTheme.accent}60, ${currentTheme.accent}08)` }} />
+            <div className="timeline-items">
               {filteredRecords.map((record, index) => (
-                <div
-                  key={record.id}
-                  className={`md:w-[calc(50%-1.5rem)] ${index % 2 === 0 ? 'md:ml-0 md:mr-auto' : 'md:ml-auto md:mr-0'}`}
-                >
+                <div key={record.id} className={`timeline-item ${index % 2 === 0 ? 'left' : 'right'}`}>
                   <EventCard
                     record={record}
-                    onEdit={(r) => {
-                      setEditingRecord(r);
-                      setShowModal(true);
-                    }}
+                    onEdit={(r) => { setEditingRecord(r); setShowModal(true); }}
                     onDelete={handleDelete}
                     onTogglePin={handleTogglePin}
                     onShare={(r) => setShareRecord(r)}
@@ -255,17 +384,15 @@ export default function Dashboard() {
 
       {/* FAB */}
       <button
-        onClick={() => {
-          setEditingRecord(null);
-          setShowModal(true);
-        }}
-        className="fixed bottom-8 right-8 w-14 h-14 rounded-full flex items-center justify-center text-white text-2xl shadow-xl transition-transform hover:scale-110 z-30"
-        style={{
-          background: 'linear-gradient(135deg, #f97316, #ec4899)',
-          animation: 'breathe 3s ease-in-out infinite',
-        }}
+        onClick={() => { setEditingRecord(null); setShowModal(true); }}
+        className="fab"
       >
         +
+      </button>
+
+      {/* Music Control */}
+      <button onClick={handleMusicToggle} className="music-btn" title={musicPlaying ? '暂停音乐' : '播放音乐'}>
+        {musicPlaying ? '🎵' : '🔇'}
       </button>
 
       {/* Modals */}
@@ -273,10 +400,7 @@ export default function Dashboard() {
         <EventModal
           record={editingRecord}
           onSave={handleSave}
-          onClose={() => {
-            setShowModal(false);
-            setEditingRecord(null);
-          }}
+          onClose={() => { setShowModal(false); setEditingRecord(null); }}
           cardBg={currentTheme.card}
           borderColor={currentTheme.border}
           textColor={currentTheme.text}
@@ -300,12 +424,27 @@ export default function Dashboard() {
         />
       )}
 
-      <style jsx global>{`
-        @keyframes breathe {
-          0%, 100% { box-shadow: 0 0 20px rgba(249, 115, 22, 0.4); }
-          50% { box-shadow: 0 0 35px rgba(236, 72, 153, 0.6); }
-        }
-      `}</style>
+      {showCalendar && (
+        <Calendar
+          records={records}
+          onClose={() => setShowCalendar(false)}
+          cardBg={currentTheme.card}
+          borderColor={currentTheme.border}
+          textColor={currentTheme.text}
+          textSecondary={currentTheme.textSecondary}
+        />
+      )}
+
+      {showRecall && (
+        <RandomRecall
+          records={records}
+          onClose={() => setShowRecall(false)}
+          cardBg={currentTheme.card}
+          borderColor={currentTheme.border}
+          textColor={currentTheme.text}
+          textSecondary={currentTheme.textSecondary}
+        />
+      )}
     </div>
   );
 }

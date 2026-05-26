@@ -32,7 +32,6 @@ export default function StatsPage() {
       return;
     }
     setUser(JSON.parse(stored));
-
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme) {
       const t = themes.find((th) => th.id === savedTheme);
@@ -74,56 +73,45 @@ export default function StatsPage() {
   if (!user) return null;
 
   return (
-    <div
-      className="min-h-screen p-6 transition-colors duration-500"
-      style={{ background: currentTheme.background, color: currentTheme.text }}
-    >
-      <div className="max-w-3xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-2xl font-bold" style={{ fontFamily: 'Playfair Display, serif' }}>
-            数据统计
-          </h1>
+    <div className="stats-page" style={{ background: currentTheme.background, color: currentTheme.text }}>
+      <div className="stats-page-inner">
+        <div className="stats-page-header">
+          <h1 style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}>数据统计</h1>
           <button
             onClick={() => router.push('/dashboard')}
-            className="px-4 py-2 rounded-lg text-sm transition-colors"
-            style={{ color: currentTheme.textSecondary, background: currentTheme.card, border: `1px solid ${currentTheme.border}` }}
+            className="stats-page-back"
+            style={{ color: currentTheme.textSecondary, background: currentTheme.card, borderColor: currentTheme.border }}
           >
             返回
           </button>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 mb-8">
-          <div className="rounded-xl p-6 text-center" style={{ background: currentTheme.card, border: `1px solid ${currentTheme.border}` }}>
-            <p className="text-4xl font-bold" style={{ color: '#f59e0b', fontFamily: 'DM Mono, monospace' }}>
-              {records.length}
-            </p>
-            <p className="text-sm mt-2" style={{ color: currentTheme.textSecondary }}>总记录数</p>
+        <div className="stats-cards" style={{ marginBottom: '2rem' }}>
+          <div className="stats-card" style={{ background: currentTheme.card, border: `1px solid ${currentTheme.border}` }}>
+            <p className="stats-number" style={{ color: '#f59e0b' }}>{records.length}</p>
+            <p className="stats-label" style={{ color: currentTheme.textSecondary }}>总记录数</p>
           </div>
-          <div className="rounded-xl p-6 text-center" style={{ background: currentTheme.card, border: `1px solid ${currentTheme.border}` }}>
-            <p className="text-4xl font-bold" style={{ color: '#22c55e', fontFamily: 'DM Mono, monospace' }}>
-              {thisMonthCount}
-            </p>
-            <p className="text-sm mt-2" style={{ color: currentTheme.textSecondary }}>本月新增</p>
+          <div className="stats-card" style={{ background: currentTheme.card, border: `1px solid ${currentTheme.border}` }}>
+            <p className="stats-number" style={{ color: '#22c55e' }}>{thisMonthCount}</p>
+            <p className="stats-label" style={{ color: currentTheme.textSecondary }}>本月新增</p>
           </div>
         </div>
 
-        <div className="rounded-xl p-6 mb-8" style={{ background: currentTheme.card, border: `1px solid ${currentTheme.border}` }}>
-          <h2 className="text-lg font-bold mb-4" style={{ fontFamily: 'Noto Sans SC, sans-serif' }}>分类统计</h2>
-          <div className="space-y-3">
+        <div className="stats-page-section" style={{ background: currentTheme.card, borderColor: currentTheme.border }}>
+          <h2 style={{ color: currentTheme.text, fontFamily: 'var(--font-noto-sans), Noto Sans SC, sans-serif' }}>分类统计</h2>
+          <div className="stats-bars">
             {categoryCounts.map((cat) => (
-              <div key={cat.name} className="flex items-center gap-3">
-                <span className="text-sm w-12 text-right" style={{ color: currentTheme.textSecondary }}>{cat.name}</span>
-                <div className="flex-1 h-6 rounded-full overflow-hidden" style={{ background: currentTheme.border + '30' }}>
+              <div key={cat.name} className="stats-bar-row">
+                <span className="stats-bar-label" style={{ color: currentTheme.textSecondary }}>{cat.name}</span>
+                <div className="stats-bar-track" style={{ background: currentTheme.border + '30' }}>
                   <div
-                    className="h-full rounded-full transition-all duration-500 flex items-center justify-end pr-2"
+                    className="stats-bar-fill"
                     style={{
-                      width: cat.count > 0 ? `${Math.max((cat.count / maxCat) * 100, 10)}%` : '0%',
+                      width: cat.count > 0 ? `${Math.max((cat.count / maxCat) * 100, 8)}%` : '0%',
                       background: cat.color,
                     }}
                   >
-                    {cat.count > 0 && (
-                      <span className="text-xs text-white font-bold" style={{ fontFamily: 'DM Mono, monospace' }}>{cat.count}</span>
-                    )}
+                    {cat.count > 0 && <span>{cat.count}</span>}
                   </div>
                 </div>
               </div>
@@ -131,9 +119,9 @@ export default function StatsPage() {
           </div>
         </div>
 
-        <div className="rounded-xl p-6 mb-8" style={{ background: currentTheme.card, border: `1px solid ${currentTheme.border}` }}>
-          <h2 className="text-lg font-bold mb-4" style={{ fontFamily: 'Noto Sans SC, sans-serif' }}>心情分布</h2>
-          <div className="flex flex-wrap justify-center gap-6">
+        <div className="stats-page-section" style={{ background: currentTheme.card, borderColor: currentTheme.border }}>
+          <h2 style={{ color: currentTheme.text, fontFamily: 'var(--font-noto-sans), Noto Sans SC, sans-serif' }}>心情分布</h2>
+          <div className="stats-moods">
             {moodCounts.filter((m) => m.count > 0).map((m) => {
               const pct = (m.count / totalMood) * 100;
               const size = 80;
@@ -143,20 +131,18 @@ export default function StatsPage() {
               const offset = circumference - (pct / 100) * circumference;
 
               return (
-                <div key={m.emoji} className="flex flex-col items-center">
-                  <div className="relative" style={{ width: size, height: size }}>
-                    <svg width={size} height={size} className="transform -rotate-90">
-                      <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={currentTheme.border + '30'} strokeWidth={stroke} />
-                      <circle
-                        cx={size / 2} cy={size / 2} r={radius} fill="none"
-                        stroke={currentTheme.accent} strokeWidth={stroke}
-                        strokeDasharray={circumference} strokeDashoffset={offset}
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                    <div className="absolute inset-0 flex items-center justify-center text-2xl">{m.emoji}</div>
-                  </div>
-                  <span className="text-xs mt-2" style={{ color: currentTheme.textSecondary, fontFamily: 'DM Mono, monospace' }}>
+                <div key={m.emoji} className="stats-mood-item">
+                  <svg width={size} height={size} className="stats-mood-svg">
+                    <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={currentTheme.border + '30'} strokeWidth={stroke} />
+                    <circle
+                      cx={size / 2} cy={size / 2} r={radius} fill="none"
+                      stroke={currentTheme.accent} strokeWidth={stroke}
+                      strokeDasharray={circumference} strokeDashoffset={offset}
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  <span className="stats-mood-emoji">{m.emoji}</span>
+                  <span className="stats-mood-count" style={{ color: currentTheme.textSecondary }}>
                     {m.count} ({Math.round(pct)}%)
                   </span>
                 </div>
@@ -169,18 +155,14 @@ export default function StatsPage() {
         </div>
 
         {earliest && latest && (
-          <div className="grid grid-cols-2 gap-4">
-            <div className="rounded-xl p-4 text-center" style={{ background: currentTheme.card, border: `1px solid ${currentTheme.border}` }}>
-              <p className="text-xs" style={{ color: currentTheme.textSecondary }}>最早记录</p>
-              <p className="text-lg font-bold mt-1" style={{ fontFamily: 'DM Mono, monospace' }}>
-                {earliest.eventDate}
-              </p>
+          <div className="stats-cards">
+            <div className="stats-card" style={{ background: currentTheme.card, border: `1px solid ${currentTheme.border}` }}>
+              <p className="stats-label" style={{ color: currentTheme.textSecondary }}>最早记录</p>
+              <p className="stats-date" style={{ color: currentTheme.text }}>{earliest.eventDate}</p>
             </div>
-            <div className="rounded-xl p-4 text-center" style={{ background: currentTheme.card, border: `1px solid ${currentTheme.border}` }}>
-              <p className="text-xs" style={{ color: currentTheme.textSecondary }}>最新记录</p>
-              <p className="text-lg font-bold mt-1" style={{ fontFamily: 'DM Mono, monospace' }}>
-                {latest.eventDate}
-              </p>
+            <div className="stats-card" style={{ background: currentTheme.card, border: `1px solid ${currentTheme.border}` }}>
+              <p className="stats-label" style={{ color: currentTheme.textSecondary }}>最新记录</p>
+              <p className="stats-date" style={{ color: currentTheme.text }}>{latest.eventDate}</p>
             </div>
           </div>
         )}

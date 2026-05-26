@@ -1,6 +1,28 @@
 import { NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/supabase';
 
+function mapRecord(r: Record<string, unknown>) {
+  return {
+    id: r.id,
+    userId: r.user_id,
+    title: r.title,
+    eventDate: r.event_date,
+    eventTime: r.event_time,
+    category: r.category,
+    mood: r.mood,
+    weather: r.weather,
+    note: r.note,
+    tags: r.tags,
+    futureLetter: r.future_letter,
+    futureLetterDate: r.future_letter_date,
+    isPinned: r.is_pinned,
+    notifyDaily: r.notify_daily,
+    notifyMilestone: r.notify_milestone,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  };
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const adminId = searchParams.get('adminId');
@@ -35,22 +57,5 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const records = data.map((r) => ({
-    id: r.id,
-    userId: r.user_id,
-    title: r.title,
-    eventDate: r.event_date,
-    eventTime: r.event_time,
-    category: r.category,
-    mood: r.mood,
-    weather: r.weather,
-    note: r.note,
-    futureLetter: r.future_letter,
-    futureLetterDate: r.future_letter_date,
-    isPinned: r.is_pinned,
-    createdAt: r.created_at,
-    updatedAt: r.updated_at,
-  }));
-
-  return NextResponse.json({ records });
+  return NextResponse.json({ records: data.map(mapRecord) });
 }

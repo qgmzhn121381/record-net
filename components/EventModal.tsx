@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { moods, weathers, categories } from '@/lib/moods';
 
-interface Record {
+interface RecordType {
   id: string;
   userId: string;
   title: string;
@@ -13,16 +13,19 @@ interface Record {
   mood: string;
   weather: string;
   note?: string | null;
+  tags?: string | null;
   futureLetter?: string | null;
   futureLetterDate?: string | null;
   isPinned: boolean;
+  notifyDaily?: boolean;
+  notifyMilestone?: boolean;
   createdAt: string;
   updatedAt: string;
 }
 
 interface EventModalProps {
-  record: Record | null;
-  onSave: (data: Omit<Record, 'id' | 'userId' | 'isPinned' | 'createdAt' | 'updatedAt'>) => void;
+  record: RecordType | null;
+  onSave: (data: Omit<RecordType, 'id' | 'userId' | 'isPinned' | 'createdAt' | 'updatedAt'>) => void;
   onClose: () => void;
   cardBg: string;
   borderColor: string;
@@ -47,8 +50,11 @@ export default function EventModal({
   const [mood, setMood] = useState('😊');
   const [weather, setWeather] = useState('☀️');
   const [note, setNote] = useState('');
+  const [tags, setTags] = useState('');
   const [futureLetter, setFutureLetter] = useState('');
   const [futureLetterDate, setFutureLetterDate] = useState('');
+  const [notifyDaily, setNotifyDaily] = useState(false);
+  const [notifyMilestone, setNotifyMilestone] = useState(true);
 
   useEffect(() => {
     if (record) {
@@ -58,8 +64,11 @@ export default function EventModal({
       setMood(record.mood);
       setWeather(record.weather);
       setNote(record.note || '');
+      setTags(record.tags || '');
       setFutureLetter(record.futureLetter || '');
       setFutureLetterDate(record.futureLetterDate || '');
+      setNotifyDaily(record.notifyDaily ?? false);
+      setNotifyMilestone(record.notifyMilestone ?? true);
     }
   }, [record]);
 
@@ -74,69 +83,80 @@ export default function EventModal({
       mood,
       weather,
       note: note || null,
+      tags: tags || null,
       futureLetter: futureLetter || null,
       futureLetterDate: futureLetterDate || null,
+      notifyDaily,
+      notifyMilestone,
     });
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.7)' }}>
+    <div className="modal-overlay" onClick={onClose}>
       <div
-        className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl p-6 shadow-2xl"
-        style={{ background: cardBg, border: `1px solid ${borderColor}` }}
+        className="modal-container"
+        onClick={(e) => e.stopPropagation()}
+        style={{ background: cardBg, borderColor }}
       >
-        <h2 className="text-xl font-bold mb-4" style={{ color: textColor, fontFamily: 'Noto Sans SC, sans-serif' }}>
+        <h2 className="modal-title" style={{ color: textColor }}>
           {record ? '编辑事件' : '添加事件'}
         </h2>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs mb-1" style={{ color: textSecondary }}>事件名称 *</label>
+        <form onSubmit={handleSubmit} className="modal-form">
+          <div className="modal-field">
+            <label style={{ color: textSecondary }}>事件名称 *</label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               required
-              className="w-full px-3 py-2 rounded-lg border focus:outline-none transition-colors"
+              className="modal-input"
               style={{ background: borderColor + '40', borderColor, color: textColor }}
             />
           </div>
 
-          <div>
-            <label className="block text-xs mb-1" style={{ color: textSecondary }}>日期 *</label>
+          <div className="modal-field">
+            <label style={{ color: textSecondary }}>日期 *</label>
             <input
               type="date"
               value={eventDate}
               onChange={(e) => setEventDate(e.target.value)}
               required
-              className="w-full px-3 py-2 rounded-lg border focus:outline-none transition-colors"
+              className="modal-input"
               style={{ background: borderColor + '40', borderColor, color: textColor }}
             />
           </div>
 
-          <div>
-            <label className="block text-xs mb-1" style={{ color: textSecondary }}>分类</label>
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border focus:outline-none transition-colors"
-              style={{ background: borderColor + '40', borderColor, color: textColor }}
-            >
+          <div className="modal-field">
+            <label style={{ color: textSecondary }}>分类</label>
+            <div className="modal-categories">
               {categories.map((c) => (
-                <option key={c.name} value={c.name}>{c.name}</option>
+                <button
+                  key={c.name}
+                  type="button"
+                  onClick={() => setCategory(c.name)}
+                  className={`modal-category-btn ${category === c.name ? 'selected' : ''}`}
+                  style={{
+                    background: category === c.name ? c.color : c.color + '20',
+                    color: category === c.name ? '#fff' : c.color,
+                    borderColor: c.color,
+                  }}
+                >
+                  {c.name}
+                </button>
               ))}
-            </select>
+            </div>
           </div>
 
-          <div>
-            <label className="block text-xs mb-1" style={{ color: textSecondary }}>心情</label>
-            <div className="flex flex-wrap gap-2">
+          <div className="modal-field">
+            <label style={{ color: textSecondary }}>心情</label>
+            <div className="modal-moods">
               {moods.map((m) => (
                 <button
                   key={m.emoji}
                   type="button"
                   onClick={() => setMood(m.emoji)}
-                  className={`w-10 h-10 rounded-lg text-xl flex items-center justify-center transition-all ${mood === m.emoji ? 'scale-110' : ''}`}
+                  className={`modal-mood-btn ${mood === m.emoji ? 'selected' : ''}`}
                   style={{
                     background: mood === m.emoji ? accent + '30' : borderColor + '40',
                     boxShadow: mood === m.emoji ? `0 0 0 2px ${accent}` : 'none',
@@ -149,15 +169,15 @@ export default function EventModal({
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs mb-1" style={{ color: textSecondary }}>天气</label>
-            <div className="flex flex-wrap gap-2">
+          <div className="modal-field">
+            <label style={{ color: textSecondary }}>天气</label>
+            <div className="modal-moods">
               {weathers.map((w) => (
                 <button
                   key={w.emoji}
                   type="button"
                   onClick={() => setWeather(w.emoji)}
-                  className={`w-10 h-10 rounded-lg text-xl flex items-center justify-center transition-all ${weather === w.emoji ? 'scale-110' : ''}`}
+                  className={`modal-mood-btn ${weather === w.emoji ? 'selected' : ''}`}
                   style={{
                     background: weather === w.emoji ? accent + '30' : borderColor + '40',
                     boxShadow: weather === w.emoji ? `0 0 0 2px ${accent}` : 'none',
@@ -170,56 +190,81 @@ export default function EventModal({
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs mb-1" style={{ color: textSecondary }}>备注</label>
-            <textarea
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              rows={2}
-              className="w-full px-3 py-2 rounded-lg border focus:outline-none transition-colors resize-none"
+          <div className="modal-field">
+            <label style={{ color: textSecondary }}>自定义标签（用逗号分隔）</label>
+            <input
+              type="text"
+              value={tags}
+              onChange={(e) => setTags(e.target.value)}
+              placeholder="例如：浪漫,惊喜,旅行"
+              className="modal-input"
               style={{ background: borderColor + '40', borderColor, color: textColor }}
             />
           </div>
 
-          <div>
-            <label className="block text-xs mb-1" style={{ color: textSecondary }}>写给未来的信</label>
+          <div className="modal-field">
+            <label style={{ color: textSecondary }}>备注</label>
+            <textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              rows={2}
+              className="modal-input modal-textarea"
+              style={{ background: borderColor + '40', borderColor, color: textColor }}
+            />
+          </div>
+
+          <div className="modal-field">
+            <label style={{ color: textSecondary }}>写给未来的信</label>
             <textarea
               value={futureLetter}
               onChange={(e) => setFutureLetter(e.target.value)}
               rows={2}
               placeholder="写点什么给未来的自己..."
-              className="w-full px-3 py-2 rounded-lg border focus:outline-none transition-colors resize-none"
+              className="modal-input modal-textarea"
               style={{ background: borderColor + '40', borderColor, color: textColor }}
             />
           </div>
 
           {futureLetter && (
-            <div>
-              <label className="block text-xs mb-1" style={{ color: textSecondary }}>信件开放日期</label>
+            <div className="modal-field">
+              <label style={{ color: textSecondary }}>信件开放日期</label>
               <input
                 type="date"
                 value={futureLetterDate}
                 onChange={(e) => setFutureLetterDate(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border focus:outline-none transition-colors"
+                className="modal-input"
                 style={{ background: borderColor + '40', borderColor, color: textColor }}
               />
             </div>
           )}
 
-          <div className="flex gap-3 justify-end pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 rounded-lg text-sm transition-colors"
-              style={{ color: textSecondary, background: borderColor + '40' }}
-            >
+          <div className="modal-field">
+            <label style={{ color: textSecondary }}>通知设置</label>
+            <div className="modal-notifications">
+              <label className="modal-checkbox" style={{ color: textColor }}>
+                <input
+                  type="checkbox"
+                  checked={notifyDaily}
+                  onChange={(e) => setNotifyDaily(e.target.checked)}
+                />
+                <span>每日倒计时提醒</span>
+              </label>
+              <label className="modal-checkbox" style={{ color: textColor }}>
+                <input
+                  type="checkbox"
+                  checked={notifyMilestone}
+                  onChange={(e) => setNotifyMilestone(e.target.checked)}
+                />
+                <span>里程碑提醒（100天、365天、500天、1000天）</span>
+              </label>
+            </div>
+          </div>
+
+          <div className="modal-actions">
+            <button type="button" onClick={onClose} className="modal-cancel" style={{ color: textSecondary, background: borderColor + '40' }}>
               取消
             </button>
-            <button
-              type="submit"
-              className="px-4 py-2 rounded-lg text-sm font-bold text-white transition-all hover:scale-105"
-              style={{ background: `linear-gradient(135deg, #f97316, #ec4899)` }}
-            >
+            <button type="submit" className="modal-save">
               保存
             </button>
           </div>

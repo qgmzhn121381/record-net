@@ -4,7 +4,7 @@ import { hashPassword } from '@/lib/auth';
 
 export async function POST(request: Request) {
   try {
-    const { username, password } = await request.json();
+    const { username, password, birthday } = await request.json();
 
     if (!username || !password) {
       return NextResponse.json({ error: '用户名和密码不能为空' }, { status: 400 });
@@ -31,14 +31,17 @@ export async function POST(request: Request) {
     const passwordHash = hashPassword(password);
     const isAdmin = username === 'admin';
 
+    const insertData: Record<string, unknown> = {
+      username,
+      password_hash: passwordHash,
+      is_admin: isAdmin,
+    };
+    if (birthday) insertData.birthday = birthday;
+
     const { data, error } = await getSupabase()
       .from('users')
-      .insert({
-        username,
-        password_hash: passwordHash,
-        is_admin: isAdmin,
-      })
-      .select('id, username, is_admin')
+      .insert(insertData)
+      .select('id, username, is_admin, birthday')
       .single();
 
     if (error) {
@@ -50,6 +53,7 @@ export async function POST(request: Request) {
         id: data.id,
         username: data.username,
         isAdmin: data.is_admin,
+        birthday: data.birthday,
       },
     });
   } catch {

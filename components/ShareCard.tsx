@@ -45,7 +45,6 @@ export default function ShareCard({ record, onClose }: ShareCardProps) {
 
   const handleDownload = async () => {
     if (!cardRef.current || !window.html2canvas) return;
-
     try {
       const canvas = await window.html2canvas(cardRef.current, {
         backgroundColor: '#0f172a',
@@ -61,50 +60,22 @@ export default function ShareCard({ record, onClose }: ShareCardProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.7)' }}>
-      <div className="w-full max-w-sm">
-        <div
-          ref={cardRef}
-          className="rounded-2xl p-8 text-center"
-          style={{
-            background: 'linear-gradient(135deg, #0f172a 0%, #581c87 100%)',
-            border: '1px solid rgba(255,255,255,0.1)',
-          }}
-        >
-          <div className="text-6xl mb-4">{record.mood}</div>
-          <h3 className="text-2xl font-bold text-white mb-2" style={{ fontFamily: 'Playfair Display, serif' }}>
-            {record.title}
-          </h3>
-          <p className="text-gray-300 mb-2" style={{ fontFamily: 'Noto Sans SC, sans-serif' }}>
-            {record.eventDate} {record.weather}
-          </p>
-          <p className="text-3xl font-bold mb-2" style={{ fontFamily: 'DM Mono, monospace', color: '#f59e0b' }}>
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="share-container" onClick={(e) => e.stopPropagation()}>
+        <div ref={cardRef} className="share-card">
+          <div className="share-mood">{record.mood}</div>
+          <h3 className="share-title">{record.title}</h3>
+          <p className="share-date">{record.eventDate} {record.weather}</p>
+          <p className="share-days">
             {days >= 0 ? `已过 ${days} 天` : `还有 ${Math.abs(days)} 天`}
           </p>
-          <div
-            className="inline-block px-3 py-1 rounded-full text-sm mb-6"
-            style={{ background: '#f9731620', color: '#f97316' }}
-          >
-            {record.category}
-          </div>
-          <p className="text-xs text-gray-500">来自记录网</p>
+          <span className="share-category">{record.category}</span>
+          <p className="share-watermark">来自记录网</p>
         </div>
 
-        <div className="flex gap-3 mt-4 justify-center">
-          <button
-            onClick={handleDownload}
-            className="px-6 py-2 rounded-lg font-bold text-white transition-all hover:scale-105"
-            style={{ background: 'linear-gradient(135deg, #f97316, #ec4899)' }}
-          >
-            下载图片
-          </button>
-          <button
-            onClick={onClose}
-            className="px-6 py-2 rounded-lg text-gray-400 hover:text-white transition-colors"
-            style={{ background: 'rgba(255,255,255,0.1)' }}
-          >
-            关闭
-          </button>
+        <div className="share-actions">
+          <button onClick={handleDownload} className="share-download">下载图片</button>
+          <button onClick={onClose} className="share-close">关闭</button>
         </div>
       </div>
     </div>

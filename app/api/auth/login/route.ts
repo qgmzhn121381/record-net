@@ -14,7 +14,7 @@ export async function POST(request: Request) {
 
     const { data, error } = await getSupabase()
       .from('users')
-      .select('id, username, is_admin')
+      .select('id, username, is_admin, birthday')
       .eq('username', username)
       .eq('password_hash', passwordHash)
       .single();
@@ -28,6 +28,7 @@ export async function POST(request: Request) {
         id: data.id,
         username: data.username,
         isAdmin: data.is_admin,
+        birthday: data.birthday,
       },
     });
   } catch {

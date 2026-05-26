@@ -10,15 +10,16 @@ interface ThemeSwitcherProps {
 
 export default function ThemeSwitcher({ themes, currentTheme, onThemeChange }: ThemeSwitcherProps) {
   return (
-    <div className="flex gap-2">
+    <div className="theme-switcher">
       {themes.map((t) => (
         <button
           key={t.id}
           onClick={() => onThemeChange(t.id)}
-          className="w-7 h-7 rounded-full border-2 transition-all duration-200 hover:scale-110"
+          className="theme-dot"
           style={{
             background: t.background,
             borderColor: currentTheme === t.id ? t.accent : 'transparent',
+            transform: currentTheme === t.id ? 'scale(1.2)' : 'scale(1)',
           }}
           title={t.name}
         />

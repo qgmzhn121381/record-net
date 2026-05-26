@@ -20,13 +20,19 @@ export const weathers = [
 ];
 
 export const categories = [
-  { name: '爱情', color: '#ef4444' },
-  { name: '学业', color: '#3b82f6' },
-  { name: '事业', color: '#f59e0b' },
-  { name: '家庭', color: '#22c55e' },
-  { name: '健康', color: '#06b6d4' },
-  { name: '纪念', color: '#a855f7' },
-  { name: '其他', color: '#6b7280' },
+  { name: '爱情', color: '#ff6b8a' },
+  { name: '学业', color: '#4ecdc4' },
+  { name: '事业', color: '#ffd93d' },
+  { name: '家庭', color: '#6c5ce7' },
+  { name: '健康', color: '#00b894' },
+  { name: '纪念', color: '#fd79a8' },
+  { name: '其他', color: '#95a5a6' },
 ];
 
 export const milestoneDays = [100, 365, 500, 1000];
+
+export const tagColors = [
+  '#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6',
+  '#1abc9c', '#e67e22', '#34495e', '#16a085', '#c0392b',
+  '#2980b9', '#27ae60', '#f1c40f', '#8e44ad', '#d35400',
+];

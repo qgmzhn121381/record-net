@@ -2,7 +2,7 @@
 
 import { categories, moods } from '@/lib/moods';
 
-interface Record {
+interface RecordStat {
   id: string;
   category: string;
   mood: string;
@@ -11,7 +11,7 @@ interface Record {
 }
 
 interface StatsModalProps {
-  records: Record[];
+  records: RecordStat[];
   onClose: () => void;
   cardBg: string;
   borderColor: string;
@@ -31,7 +31,6 @@ export default function StatsModal({ records, onClose, cardBg, borderColor, text
   }));
 
   const maxCat = Math.max(...categoryCounts.map((c) => c.count), 1);
-
   const totalMood = records.length || 1;
 
   const sortedByDate = [...records].sort((a, b) => a.eventDate.localeCompare(b.eventDate));
@@ -42,91 +41,67 @@ export default function StatsModal({ records, onClose, cardBg, borderColor, text
   const thisMonthCount = records.filter((r) => r.createdAt.startsWith(thisMonth)).length;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.7)' }}>
-      <div
-        className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl p-6 shadow-2xl"
-        style={{ background: cardBg, border: `1px solid ${borderColor}` }}
-      >
-        <h2 className="text-xl font-bold mb-6" style={{ color: textColor, fontFamily: 'Noto Sans SC, sans-serif' }}>
-          数据统计
-        </h2>
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="stats-container" onClick={(e) => e.stopPropagation()} style={{ background: cardBg, borderColor }}>
+        <h2 className="stats-title" style={{ color: textColor }}>数据统计</h2>
 
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <div className="rounded-xl p-4 text-center" style={{ background: borderColor + '30' }}>
-            <p className="text-3xl font-bold" style={{ color: '#f59e0b', fontFamily: 'DM Mono, monospace' }}>
-              {records.length}
-            </p>
-            <p className="text-xs mt-1" style={{ color: textSecondary }}>总记录数</p>
+        <div className="stats-cards">
+          <div className="stats-card" style={{ background: borderColor + '30' }}>
+            <p className="stats-number" style={{ color: '#f59e0b' }}>{records.length}</p>
+            <p className="stats-label" style={{ color: textSecondary }}>总记录数</p>
           </div>
-          <div className="rounded-xl p-4 text-center" style={{ background: borderColor + '30' }}>
-            <p className="text-3xl font-bold" style={{ color: '#22c55e', fontFamily: 'DM Mono, monospace' }}>
-              {thisMonthCount}
-            </p>
-            <p className="text-xs mt-1" style={{ color: textSecondary }}>本月新增</p>
+          <div className="stats-card" style={{ background: borderColor + '30' }}>
+            <p className="stats-number" style={{ color: '#22c55e' }}>{thisMonthCount}</p>
+            <p className="stats-label" style={{ color: textSecondary }}>本月新增</p>
           </div>
         </div>
 
-        <div className="mb-6">
-          <h3 className="text-sm font-bold mb-3" style={{ color: textColor }}>分类统计</h3>
-          <div className="space-y-2">
+        <div className="stats-section">
+          <h3 style={{ color: textColor }}>分类统计</h3>
+          <div className="stats-bars">
             {categoryCounts.map((cat) => (
-              <div key={cat.name} className="flex items-center gap-2">
-                <span className="text-xs w-12 text-right" style={{ color: textSecondary }}>{cat.name}</span>
-                <div className="flex-1 h-5 rounded-full overflow-hidden" style={{ background: borderColor + '30' }}>
+              <div key={cat.name} className="stats-bar-row">
+                <span className="stats-bar-label" style={{ color: textSecondary }}>{cat.name}</span>
+                <div className="stats-bar-track" style={{ background: borderColor + '30' }}>
                   <div
-                    className="h-full rounded-full transition-all duration-500"
+                    className="stats-bar-fill"
                     style={{
                       width: `${(cat.count / maxCat) * 100}%`,
                       background: cat.color,
                     }}
-                  />
+                  >
+                    {cat.count > 0 && <span>{cat.count}</span>}
+                  </div>
                 </div>
-                <span className="text-xs w-6 text-right" style={{ color: textSecondary, fontFamily: 'DM Mono, monospace' }}>
-                  {cat.count}
-                </span>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="mb-6">
-          <h3 className="text-sm font-bold mb-3" style={{ color: textColor }}>心情分布</h3>
-          <div className="flex flex-wrap justify-center gap-4">
+        <div className="stats-section">
+          <h3 style={{ color: textColor }}>心情分布</h3>
+          <div className="stats-moods">
             {moodCounts.filter(m => m.count > 0).map((m) => {
               const pct = (m.count / totalMood) * 100;
-              const size = 60;
+              const size = 70;
               const stroke = 4;
               const radius = (size - stroke) / 2;
               const circumference = 2 * Math.PI * radius;
               const offset = circumference - (pct / 100) * circumference;
 
               return (
-                <div key={m.emoji} className="flex flex-col items-center">
-                  <svg width={size} height={size} className="transform -rotate-90">
+                <div key={m.emoji} className="stats-mood-item">
+                  <svg width={size} height={size} className="stats-mood-svg">
+                    <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={borderColor + '30'} strokeWidth={stroke} />
                     <circle
-                      cx={size / 2}
-                      cy={size / 2}
-                      r={radius}
-                      fill="none"
-                      stroke={borderColor + '30'}
-                      strokeWidth={stroke}
-                    />
-                    <circle
-                      cx={size / 2}
-                      cy={size / 2}
-                      r={radius}
-                      fill="none"
-                      stroke="#f97316"
-                      strokeWidth={stroke}
-                      strokeDasharray={circumference}
-                      strokeDashoffset={offset}
+                      cx={size / 2} cy={size / 2} r={radius} fill="none"
+                      stroke="#667eea" strokeWidth={stroke}
+                      strokeDasharray={circumference} strokeDashoffset={offset}
                       strokeLinecap="round"
                     />
                   </svg>
-                  <span className="text-xl -mt-9 mb-3">{m.emoji}</span>
-                  <span className="text-xs mt-1" style={{ color: textSecondary, fontFamily: 'DM Mono, monospace' }}>
-                    {m.count}
-                  </span>
+                  <span className="stats-mood-emoji">{m.emoji}</span>
+                  <span className="stats-mood-count" style={{ color: textSecondary }}>{m.count}</span>
                 </div>
               );
             })}
@@ -134,27 +109,19 @@ export default function StatsModal({ records, onClose, cardBg, borderColor, text
         </div>
 
         {earliest && latest && (
-          <div className="grid grid-cols-2 gap-4">
-            <div className="rounded-xl p-3 text-center" style={{ background: borderColor + '30' }}>
-              <p className="text-xs" style={{ color: textSecondary }}>最早记录</p>
-              <p className="text-sm font-bold mt-1" style={{ color: textColor, fontFamily: 'DM Mono, monospace' }}>
-                {earliest.eventDate}
-              </p>
+          <div className="stats-cards">
+            <div className="stats-card" style={{ background: borderColor + '30' }}>
+              <p className="stats-label" style={{ color: textSecondary }}>最早记录</p>
+              <p className="stats-date" style={{ color: textColor }}>{earliest.eventDate}</p>
             </div>
-            <div className="rounded-xl p-3 text-center" style={{ background: borderColor + '30' }}>
-              <p className="text-xs" style={{ color: textSecondary }}>最新记录</p>
-              <p className="text-sm font-bold mt-1" style={{ color: textColor, fontFamily: 'DM Mono, monospace' }}>
-                {latest.eventDate}
-              </p>
+            <div className="stats-card" style={{ background: borderColor + '30' }}>
+              <p className="stats-label" style={{ color: textSecondary }}>最新记录</p>
+              <p className="stats-date" style={{ color: textColor }}>{latest.eventDate}</p>
             </div>
           </div>
         )}
 
-        <button
-          onClick={onClose}
-          className="w-full mt-6 py-2 rounded-lg text-sm transition-colors"
-          style={{ color: textSecondary, background: borderColor + '40' }}
-        >
+        <button onClick={onClose} className="stats-close" style={{ color: textSecondary, background: borderColor + '40' }}>
           关闭
         </button>
       </div>

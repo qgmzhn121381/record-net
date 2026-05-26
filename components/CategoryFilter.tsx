@@ -8,14 +8,14 @@ interface CategoryFilterProps {
   cardBg: string;
 }
 
-export default function CategoryFilter({ selected, onSelect, cardBg }: CategoryFilterProps) {
+export default function CategoryFilter({ selected, onSelect }: CategoryFilterProps) {
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="category-filter">
       <button
         onClick={() => onSelect('全部')}
-        className="px-3 py-1 rounded-full text-xs font-medium transition-all duration-200"
+        className={`category-btn ${selected === '全部' ? 'active' : ''}`}
         style={{
-          background: selected === '全部' ? '#f97316' : cardBg,
+          background: selected === '全部' ? '#667eea' : 'rgba(255,255,255,0.05)',
           color: selected === '全部' ? '#fff' : '#94a3b8',
         }}
       >
@@ -25,10 +25,10 @@ export default function CategoryFilter({ selected, onSelect, cardBg }: CategoryF
         <button
           key={cat.name}
           onClick={() => onSelect(cat.name)}
-          className="px-3 py-1 rounded-full text-xs font-medium transition-all duration-200"
+          className={`category-btn ${selected === cat.name ? 'active' : ''}`}
           style={{
-            background: selected === cat.name ? cat.color : cardBg,
-            color: selected === cat.name ? '#fff' : '#94a3b8',
+            background: selected === cat.name ? cat.color : cat.color + '15',
+            color: selected === cat.name ? '#fff' : cat.color,
           }}
         >
           {cat.name}
