@@ -14,7 +14,7 @@ export async function POST(request: Request) {
 
     const { data, error } = await getSupabase()
       .from('users')
-      .select('id, username, is_admin, birthday')
+      .select('id, username, is_admin, birthday, birthday_type, festival_notify')
       .eq('username', username)
       .eq('password_hash', passwordHash)
       .single();
@@ -29,6 +29,8 @@ export async function POST(request: Request) {
         username: data.username,
         isAdmin: data.is_admin,
         birthday: data.birthday,
+        birthdayType: data.birthday_type,
+        festivalNotify: data.festival_notify,
       },
     });
   } catch {
