@@ -333,8 +333,10 @@ class RunnerGame {
     this.canvas.style.width = this.W + 'px'; this.canvas.style.height = this.H + 'px';
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     this.groundY = this.H * GROUND_RATIO;
-    if (this.player) this.player.groundY = this.groundY;
-    if (this.state === 'READY') this.player.x = this.W * 0.15;
+    if (this.player) {
+      this.player.groundY = this.groundY;
+      if (this.state === 'READY') this.player.x = this.W * 0.15;
+    }
   }
 
   // ---- INPUT ----
