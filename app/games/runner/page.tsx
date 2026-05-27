@@ -42,10 +42,10 @@ interface Building { x: number; w: number; h: number; windows: { rx: number; ry:
 
 interface GroundLine { x: number; }
 
-const GRAVITY = 0.8;
-const JUMP_VEL = -15;
-const LONG_JUMP_VEL = -18;
-const MAX_FALL = 20;
+const GRAVITY = 0.5;
+const JUMP_VEL = -20;
+const LONG_JUMP_VEL = -24;
+const MAX_FALL = 15;
 const BASE_SPEED = 300;
 const MAX_SPEED = 700;
 const SPEED_PER_SCORE = 0.8;
