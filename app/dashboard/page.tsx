@@ -261,6 +261,7 @@ export default function Dashboard() {
             <button onClick={() => setShowCalendar(true)} className="header-btn" style={{ background: currentTheme.card, borderColor: currentTheme.border }}>📅</button>
             <button onClick={() => setShowRecall(true)} className="header-btn" style={{ background: currentTheme.card, borderColor: currentTheme.border }}>🎲</button>
             <button onClick={() => router.push('/birthday-cards')} className="header-btn" style={{ background: currentTheme.card, borderColor: currentTheme.border }}>🎂</button>
+            <button onClick={() => router.push('/watch')} className="header-btn" style={{ background: currentTheme.card, borderColor: currentTheme.border }}>🎬</button>
             <button onClick={() => setShowStats(true)} className="header-btn" style={{ background: currentTheme.card, borderColor: currentTheme.border }}>统计</button>
             <button onClick={() => setShowSettings(!showSettings)} className="header-btn" style={{ background: currentTheme.card, borderColor: currentTheme.border }}>⚙️</button>
             <button onClick={handleLogout} className="header-btn logout">退出</button>

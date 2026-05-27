@@ -49,9 +49,9 @@ export default function Home() {
             <span className="landing-btn-icon">📝</span>
             进入记录网
           </button>
-          <button onClick={() => router.push('/games')} className="landing-btn secondary">
-            <span className="landing-btn-icon">🎮</span>
-            小游戏乐园
+          <button onClick={() => router.push('/watch')} className="landing-btn secondary">
+            <span className="landing-btn-icon">🎬</span>
+            免费看剧
           </button>
         </div>
 
